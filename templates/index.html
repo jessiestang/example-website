@@ -26,6 +26,96 @@
             --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
+        /* ── Light mode overrides ── */
+        [data-theme="light"] {
+            --bg-color: #f1f5f9;
+            --card-bg: rgba(255, 255, 255, 0.85);
+            --card-border: rgba(0, 0, 0, 0.10);
+            --card-hover-border: rgba(99, 102, 241, 0.6);
+            --text-primary: #111827;
+            --text-secondary: #6b7280;
+            --accent-glow: rgba(99, 102, 241, 0.12);
+        }
+
+        [data-theme="light"] body {
+            background-image:
+                radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.08) 0px, transparent 50%),
+                radial-gradient(at 100% 0%, rgba(59, 130, 246, 0.06) 0px, transparent 50%),
+                radial-gradient(at 50% 100%, rgba(16, 185, 129, 0.04) 0px, transparent 50%);
+        }
+
+        [data-theme="light"] .search-input,
+        [data-theme="light"] .filter-select {
+            background: rgba(0, 0, 0, 0.05);
+            color: var(--text-primary);
+        }
+
+        [data-theme="light"] h1 {
+            background: linear-gradient(135deg, #1e1b4b 30%, #6366f1 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* ── Toggle switch ── */
+        .theme-toggle {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        .theme-toggle-icon {
+            font-size: 1rem;
+            line-height: 1;
+            user-select: none;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 44px;
+            height: 24px;
+            cursor: pointer;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+            position: absolute;
+        }
+
+        .toggle-track {
+            position: absolute;
+            inset: 0;
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid var(--card-border);
+            border-radius: 999px;
+            transition: var(--transition);
+        }
+
+        .toggle-switch input:checked + .toggle-track {
+            background: var(--accent-color);
+            border-color: transparent;
+        }
+
+        .toggle-thumb {
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 16px;
+            height: 16px;
+            background: #fff;
+            border-radius: 50%;
+            transition: var(--transition);
+            box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+        }
+
+        .toggle-switch input:checked ~ .toggle-thumb {
+            transform: translateX(20px);
+        }
+
         * {
             box-sizing: border-box;
             margin: 0;
@@ -572,6 +662,16 @@
                 <span class="badge-pulse"></span>
                 <span id="last-updated-text">Checking feed...</span>
             </div>
+            <!-- Dark / Light mode toggle -->
+            <div class="theme-toggle" title="Toggle light/dark mode">
+                <span class="theme-toggle-icon">🌙</span>
+                <label class="toggle-switch" for="theme-toggle-input">
+                    <input type="checkbox" id="theme-toggle-input" aria-label="Toggle light mode">
+                    <span class="toggle-track"></span>
+                    <span class="toggle-thumb"></span>
+                </label>
+                <span class="theme-toggle-icon">☀️</span>
+            </div>
             <button class="btn btn-primary" id="refresh-btn">
                 <svg class="spinner" id="btn-spinner" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
                     <circle cx="12" cy="12" r="10" stroke-dasharray="32" stroke-dashoffset="8"/>
@@ -965,6 +1065,28 @@
             
             showToast("CSV exported successfully!");
         }
+
+        // ── Dark / Light mode toggle ──
+        const themeToggleInput = document.getElementById('theme-toggle-input');
+
+        function applyTheme(isLight) {
+            if (isLight) {
+                document.documentElement.setAttribute('data-theme', 'light');
+            } else {
+                document.documentElement.removeAttribute('data-theme');
+            }
+            themeToggleInput.checked = isLight;
+        }
+
+        // Restore saved preference on load
+        const savedTheme = localStorage.getItem('bq-theme');
+        applyTheme(savedTheme === 'light');
+
+        themeToggleInput.addEventListener('change', () => {
+            const isLight = themeToggleInput.checked;
+            applyTheme(isLight);
+            localStorage.setItem('bq-theme', isLight ? 'light' : 'dark');
+        });
 
         // Initialize
         fetchReleaseNotes();
