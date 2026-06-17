@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BigQuery Release Radar</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --card-bg: rgba(17, 24, 39, 0.7);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --card-hover-border: rgba(99, 102, 241, 0.4);
+            --text-primary: #f3f4f6;
+            --text-secondary: #9ca3af;
+            --accent-color: #6366f1;
+            --accent-glow: rgba(99, 102, 241, 0.15);
+            --accent-hover: #4f46e5;
+            --success: #10b981;
+            --info: #3b82f6;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --general: #6b7280;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.12) 0px, transparent 50%),
+                radial-gradient(at 100% 0%, rgba(59, 130, 246, 0.1) 0px, transparent 50%),
+                radial-gradient(at 50% 100%, rgba(16, 185, 129, 0.05) 0px, transparent 50%);
+            background-attachment: fixed;
+        }
+
+        header {
+            padding: 2rem 1rem;
+            max-width: 1200px;
+            width: 100%;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--card-border);
+        }
+
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--accent-color), #3b82f6);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 8px 20px rgba(99, 102, 241, 0.3);
+        }
+
+        .logo-icon svg {
+            width: 22px;
+            height: 22px;
+            fill: white;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #fff 30%, #a5b4fc 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.5px;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .btn {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-primary);
+            border: 1px solid var(--card-border);
+            padding: 0.6rem 1.2rem;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: var(--transition);
+            backdrop-filter: blur(10px);
+        }
+
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.2);
+            transform: translateY(-1px);
+        }
+
+        .btn-primary {
+            background: var(--accent-color);
+            border-color: transparent;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-hover);
+            border-color: transparent;
+            box-shadow: 0 6px 18px rgba(99, 102, 241, 0.35);
+        }
+
+        .spinner {
+            animation: rotate 1.5s linear infinite;
+            display: none;
+        }
+
+        @keyframes rotate {
+            100% { transform: rotate(360deg); }
+        }
+
+        main {
+            flex: 1;
+            max-width: 1200px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .controls {
+            display: grid;
+            grid-template-columns: 1fr auto auto;
+            gap: 1rem;
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            padding: 1rem;
+            border-radius: 16px;
+            backdrop-filter: blur(12px);
+            align-items: center;
+        }
+
+        @media (max-width: 768px) {
+            .controls {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .search-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .search-input {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--card-border);
+            padding: 0.75rem 1rem 0.75rem 2.5rem;
+            border-radius: 10px;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 0.95rem;
+            transition: var(--transition);
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 0.8rem;
+            fill: var(--text-secondary);
+            width: 18px;
+            height: 18px;
+        }
+
+        .filter-select {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--card-border);
+            color: var(--text-primary);
+            padding: 0.75rem 1.5rem;
+            border-radius: 10px;
+            font-family: inherit;
+            cursor: pointer;
+            transition: var(--transition);
+            outline: none;
+        }
+
+        .filter-select:focus {
+            border-color: var(--accent-color);
+        }
+
+        .feed-info {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .badge-pulse {
+            width: 8px;
+            height: 8px;
+            background-color: var(--success);
+            border-radius: 50%;
+            display: inline-block;
+            box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+            }
+            70% {
+                transform: scale(1);
+                box-shadow: 0 0 0 6px rgba(16, 185, 129, 0);
+            }
+            100% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+            }
+        }
+
+        .timeline {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .date-group {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .date-header {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .date-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--accent-color);
+            box-shadow: 0 0 10px var(--accent-color);
+        }
+
+        .update-cards {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
+
+        .update-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            backdrop-filter: blur(12px);
+            transition: var(--transition);
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .update-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--type-color, var(--general));
+        }
+
+        .update-card:hover {
+            border-color: var(--card-hover-border);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .type-badge {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            color: #fff;
+            background: var(--type-color, var(--general));
+            box-shadow: 0 2px 8px var(--type-glow, rgba(0,0,0,0.2));
+            letter-spacing: 0.5px;
+        }
+
+        .card-body {
+            font-size: 0.95rem;
+            line-height: 1.6;
+            color: var(--text-primary);
+        }
+
+        .card-body p {
+            margin-bottom: 0.75rem;
+        }
+
+        .card-body p:last-child {
+            margin-bottom: 0;
+        }
+
+        .card-body a {
+            color: var(--accent-color);
+            text-decoration: none;
+            transition: var(--transition);
+            font-weight: 500;
+        }
+
+        .card-body a:hover {
+            color: #818cf8;
+            text-decoration: underline;
+        }
+
+        .card-body ul {
+            margin-left: 1.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .card-body li {
+            margin-bottom: 0.25rem;
+        }
+
+        .card-body code {
+            background: rgba(255, 255, 255, 0.08);
+            padding: 0.1rem 0.3rem;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.9em;
+            color: #f43f5e;
+        }
+
+        .card-footer {
+            display: flex;
+            justify-content: flex-end;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            padding-top: 0.75rem;
+        }
+
+        .btn-tweet {
+            font-size: 0.8rem;
+            padding: 0.4rem 0.8rem;
+            background: #1da1f2;
+            color: #fff;
+            border: none;
+            box-shadow: 0 4px 10px rgba(29, 161, 242, 0.2);
+        }
+
+        .btn-tweet:hover {
+            background: #1a91da;
+            box-shadow: 0 6px 14px rgba(29, 161, 242, 0.35);
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: var(--transition);
+            z-index: 1000;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal {
+            background: #151820;
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            width: 100%;
+            max-width: 500px;
+            padding: 2rem;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+            transform: scale(0.9);
+            transition: var(--transition);
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .modal-overlay.active .modal {
+            transform: scale(1);
+        }
+
+        .modal-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+        }
+
+        .tweet-preview-container {
+            background: #1c202b;
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .tweet-textarea {
+            width: 100%;
+            min-height: 120px;
+            background: transparent;
+            border: none;
+            outline: none;
+            color: #fff;
+            font-family: inherit;
+            font-size: 0.95rem;
+            resize: none;
+        }
+
+        .tweet-stats {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .char-counter {
+            font-weight: 600;
+        }
+
+        .char-counter.warning {
+            color: var(--warning);
+        }
+
+        .char-counter.danger {
+            color: var(--danger);
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            color: var(--text-secondary);
+            display: none;
+        }
+
+        .empty-state svg {
+            width: 64px;
+            height: 64px;
+            fill: var(--text-secondary);
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        /* Toast notification */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: var(--card-bg);
+            border: 1px solid var(--success);
+            padding: 1rem 1.5rem;
+            border-radius: 10px;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            transform: translateY(150%);
+            transition: var(--transition);
+            z-index: 1001;
+            backdrop-filter: blur(10px);
+        }
+
+        .toast.show {
+            transform: translateY(0);
+        }
+
+        .toast-icon {
+            width: 20px;
+            height: 20px;
+            fill: var(--success);
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo-area">
+            <div class="logo-icon">
+                <svg viewBox="0 0 24 24">
+                    <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+                </svg>
+            </div>
+            <h1>BigQuery Release Radar</h1>
+        </div>
+        <div class="header-actions">
+            <div class="feed-info">
+                <span class="badge-pulse"></span>
+                <span id="last-updated-text">Checking feed...</span>
+            </div>
+            <button class="btn btn-primary" id="refresh-btn">
+                <svg class="spinner" id="btn-spinner" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                    <circle cx="12" cy="12" r="10" stroke-dasharray="32" stroke-dashoffset="8"/>
+                </svg>
+                <span id="btn-text">Refresh</span>
+            </button>
+        </div>
+    </header>
+
+    <main>
+        <div class="controls">
+            <div class="search-wrapper">
+                <svg class="search-icon" viewBox="0 0 24 24">
+                    <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+                </svg>
+                <input type="text" class="search-input" id="search-bar" placeholder="Search release notes details...">
+            </div>
+            <select class="filter-select" id="type-filter">
+                <option value="ALL">All Update Types</option>
+                <option value="FEATURE">Features</option>
+                <option value="ANNOUNCEMENT">Announcements</option>
+                <option value="ISSUE">Issues / Bug Fixes</option>
+                <option value="DEPRECATED">Deprecations</option>
+                <option value="GENERAL">Other</option>
+            </select>
+        </div>
+
+        <div class="empty-state" id="empty-state">
+            <svg viewBox="0 0 24 24">
+                <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+            </svg>
+            <h3>No matching release notes found</h3>
+            <p>Try resetting filters or changing your search terms.</p>
+        </div>
+
+        <div class="timeline" id="timeline-container">
+            <!-- Feed cards will be loaded here dynamically -->
+        </div>
+    </main>
+
+    <!-- Twitter Intent Modal -->
+    <div class="modal-overlay" id="tweet-modal">
+        <div class="modal">
+            <h3 class="modal-title">Share Update on X</h3>
+            <div class="tweet-preview-container">
+                <textarea class="tweet-textarea" id="tweet-text" maxlength="280"></textarea>
+                <div class="tweet-stats">
+                    <span>Preview of your tweet</span>
+                    <span class="char-counter" id="char-counter">0 / 280</span>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn" id="close-modal-btn">Cancel</button>
+                <button class="btn btn-primary btn-tweet" id="post-tweet-btn">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="margin-right: 4px;">
+                        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                    </svg>
+                    Tweet
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast notification -->
+    <div class="toast" id="toast">
+        <svg class="toast-icon" viewBox="0 0 24 24">
+            <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+        </svg>
+        <span id="toast-message">Success!</span>
+    </div>
+
+    <script>
+        let releaseNotes = [];
+        
+        // Element references
+        const refreshBtn = document.getElementById('refresh-btn');
+        const btnSpinner = document.getElementById('btn-spinner');
+        const btnText = document.getElementById('btn-text');
+        const lastUpdatedText = document.getElementById('last-updated-text');
+        const timelineContainer = document.getElementById('timeline-container');
+        const searchBar = document.getElementById('search-bar');
+        const typeFilter = document.getElementById('type-filter');
+        const emptyState = document.getElementById('empty-state');
+        
+        // Modal references
+        const tweetModal = document.getElementById('tweet-modal');
+        const tweetTextarea = document.getElementById('tweet-text');
+        const charCounter = document.getElementById('char-counter');
+        const closeModalBtn = document.getElementById('close-modal-btn');
+        const postTweetBtn = document.getElementById('post-tweet-btn');
+        
+        // Toast references
+        const toast = document.getElementById('toast');
+        const toastMessage = document.getElementById('toast-message');
+
+        // Color mapper for badges
+        const badgeColors = {
+            'FEATURE': { color: 'var(--success)', glow: 'rgba(16, 185, 129, 0.3)' },
+            'ANNOUNCEMENT': { color: 'var(--info)', glow: 'rgba(59, 130, 246, 0.3)' },
+            'ISSUE': { color: 'var(--warning)', glow: 'rgba(245, 158, 11, 0.3)' },
+            'DEPRECATED': { color: 'var(--danger)', glow: 'rgba(239, 68, 68, 0.3)' },
+            'GENERAL': { color: 'var(--general)', glow: 'rgba(107, 114, 128, 0.3)' }
+        };
+
+        function getBadgeStyle(type) {
+            const upper = type.toUpperCase();
+            if (upper.includes('FEATURE')) return badgeColors.FEATURE;
+            if (upper.includes('ANNOUNCEMENT')) return badgeColors.ANNOUNCEMENT;
+            if (upper.includes('ISSUE')) return badgeColors.ISSUE;
+            if (upper.includes('DEPRECATED')) return badgeColors.DEPRECATED;
+            return badgeColors.GENERAL;
+        }
+
+        // Fetch API
+        async function fetchReleaseNotes() {
+            setLoading(true);
+            try {
+                const response = await fetch('/api/release-notes');
+                const data = await response.json();
+                
+                if (data.success) {
+                    releaseNotes = data.entries;
+                    
+                    // Formatting feed updated time
+                    if (data.updated) {
+                        const date = new Date(data.updated);
+                        lastUpdatedText.textContent = `Feed updated: ${date.toLocaleString()}`;
+                    } else {
+                        lastUpdatedText.textContent = 'Feed updated: Unknown';
+                    }
+                    
+                    renderTimeline();
+                    showToast("Release notes loaded successfully!");
+                } else {
+                    showToast("Error parsing feed: " + data.error, true);
+                }
+            } catch (error) {
+                showToast("Failed to fetch release notes: " + error.message, true);
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        function setLoading(isLoading) {
+            if (isLoading) {
+                btnSpinner.style.display = 'inline-block';
+                btnText.textContent = 'Loading...';
+                refreshBtn.disabled = true;
+            } else {
+                btnSpinner.style.display = 'none';
+                btnText.textContent = 'Refresh';
+                refreshBtn.disabled = false;
+            }
+        }
+
+        // Render UI
+        function renderTimeline() {
+            const searchQuery = searchBar.value.toLowerCase();
+            const typeVal = typeFilter.value;
+            
+            timelineContainer.innerHTML = '';
+            let totalRendered = 0;
+            
+            releaseNotes.forEach(entry => {
+                // Filter individual updates
+                const filteredUpdates = entry.updates.filter(update => {
+                    // Match type
+                    if (typeVal !== 'ALL') {
+                        const upperType = update.type.toUpperCase();
+                        if (typeVal === 'GENERAL') {
+                            const standardTypes = ['FEATURE', 'ANNOUNCEMENT', 'ISSUE', 'DEPRECATED'];
+                            if (standardTypes.some(t => upperType.includes(t))) return false;
+                        } else {
+                            if (!upperType.includes(typeVal)) return false;
+                        }
+                    }
+                    // Match search query
+                    if (searchQuery) {
+                        const typeMatch = update.type.toLowerCase().includes(searchQuery);
+                        const textMatch = update.html.toLowerCase().includes(searchQuery);
+                        if (!typeMatch && !textMatch) return false;
+                    }
+                    return true;
+                });
+                
+                if (filteredUpdates.length > 0) {
+                    totalRendered += filteredUpdates.length;
+                    
+                    const dateGroup = document.createElement('div');
+                    dateGroup.className = 'date-group';
+                    
+                    const dateHeader = document.createElement('div');
+                    dateHeader.className = 'date-header';
+                    dateHeader.innerHTML = `<span class="date-dot"></span><span>${entry.date}</span>`;
+                    dateGroup.appendChild(dateHeader);
+                    
+                    const cardsContainer = document.createElement('div');
+                    cardsContainer.className = 'update-cards';
+                    
+                    filteredUpdates.forEach(update => {
+                        const badgeStyle = getBadgeStyle(update.type);
+                        const card = document.createElement('div');
+                        card.className = 'update-card';
+                        card.style.setProperty('--type-color', badgeStyle.color);
+                        card.style.setProperty('--type-glow', badgeStyle.glow);
+                        
+                        card.innerHTML = `
+                            <div class="card-header">
+                                <span class="type-badge">${update.type}</span>
+                            </div>
+                            <div class="card-body">
+                                ${update.html}
+                            </div>
+                            <div class="card-footer">
+                                <button class="btn btn-tweet" onclick="openTweetModal('${entry.date}', '${update.type}', this)">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                                        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                                    </svg>
+                                    Tweet Update
+                                </button>
+                            </div>
+                        `;
+                        cardsContainer.appendChild(card);
+                    });
+                    
+                    dateGroup.appendChild(cardsContainer);
+                    timelineContainer.appendChild(dateGroup);
+                }
+            });
+            
+            if (totalRendered === 0) {
+                emptyState.style.display = 'block';
+            } else {
+                emptyState.style.display = 'none';
+            }
+        }
+
+        // Twitter sharing functionality
+        function openTweetModal(date, type, buttonEl) {
+            // Find the update body content text
+            const cardEl = buttonEl.closest('.update-card');
+            const bodyText = cardEl.querySelector('.card-body').textContent.trim();
+            
+            // Format tweet text nicely
+            // Cut text if too long to make room for hashtag/link
+            let tweetBase = `BigQuery Update (${date}) [${type}]: ${bodyText}`;
+            if (tweetBase.length > 220) {
+                tweetBase = tweetBase.substring(0, 217) + '...';
+            }
+            
+            const fullTweet = `${tweetBase}\n\n#BigQuery #GoogleCloud`;
+            
+            tweetTextarea.value = fullTweet;
+            updateCharCount();
+            
+            tweetModal.classList.add('active');
+        }
+
+        function updateCharCount() {
+            const len = tweetTextarea.value.length;
+            charCounter.textContent = `${len} / 280`;
+            
+            charCounter.classList.remove('warning', 'danger');
+            if (len >= 260 && len < 280) {
+                charCounter.classList.add('warning');
+            } else if (len >= 280) {
+                charCounter.classList.add('danger');
+            }
+        }
+
+        function showToast(message, isError = false) {
+            toastMessage.textContent = message;
+            toast.style.borderColor = isError ? 'var(--danger)' : 'var(--success)';
+            toast.querySelector('.toast-icon').style.fill = isError ? 'var(--danger)' : 'var(--success)';
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // Event Listeners
+        refreshBtn.addEventListener('click', fetchReleaseNotes);
+        searchBar.addEventListener('input', renderTimeline);
+        typeFilter.addEventListener('change', renderTimeline);
+        
+        tweetTextarea.addEventListener('input', updateCharCount);
+        
+        closeModalBtn.addEventListener('click', () => {
+            tweetModal.classList.remove('active');
+        });
+
+        postTweetBtn.addEventListener('click', () => {
+            const text = encodeURIComponent(tweetTextarea.value);
+            const twitterUrl = `https://twitter.com/intent/tweet?text=${text}`;
+            window.open(twitterUrl, '_blank');
+            tweetModal.classList.remove('active');
+            showToast("Opening X/Twitter to publish tweet!");
+        });
+
+        // Initialize
+        fetchReleaseNotes();
+    </script>
+</body>
+</html>
