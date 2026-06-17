@@ -152,7 +152,7 @@
 
         .controls {
             display: grid;
-            grid-template-columns: 1fr auto auto;
+            grid-template-columns: 1fr auto auto auto;
             gap: 1rem;
             background: var(--card-bg);
             border: 1px solid var(--card-border);
@@ -399,6 +399,19 @@
             box-shadow: 0 6px 14px rgba(29, 161, 242, 0.35);
         }
 
+        .btn-copy {
+            font-size: 0.8rem;
+            padding: 0.4rem 0.8rem;
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-primary);
+            border: 1px solid var(--card-border);
+        }
+
+        .btn-copy:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
         /* Modal Styles */
         .modal-overlay {
             position: fixed;
@@ -584,6 +597,14 @@
                 <option value="DEPRECATED">Deprecations</option>
                 <option value="GENERAL">Other</option>
             </select>
+            <button class="btn" id="export-csv-btn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px;">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="7 10 12 15 17 10"></polyline>
+                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                Export CSV
+            </button>
         </div>
 
         <div class="empty-state" id="empty-state">
@@ -773,6 +794,13 @@
                                 ${update.html}
                             </div>
                             <div class="card-footer">
+                                <button class="btn btn-copy" onclick="copyToClipboard(this)">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px;">
+                                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                    </svg>
+                                    <span>Copy</span>
+                                </button>
                                 <button class="btn btn-tweet" onclick="openTweetModal('${entry.date}', '${update.type}', this)">
                                     <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
                                         <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
@@ -843,6 +871,7 @@
         refreshBtn.addEventListener('click', fetchReleaseNotes);
         searchBar.addEventListener('input', renderTimeline);
         typeFilter.addEventListener('change', renderTimeline);
+        document.getElementById('export-csv-btn').addEventListener('click', exportToCSV);
         
         tweetTextarea.addEventListener('input', updateCharCount);
         
@@ -857,6 +886,85 @@
             tweetModal.classList.remove('active');
             showToast("Opening X/Twitter to publish tweet!");
         });
+
+        // Copy update text to clipboard
+        function copyToClipboard(buttonEl) {
+            const cardEl = buttonEl.closest('.update-card');
+            const bodyText = cardEl.querySelector('.card-body').textContent.trim();
+            
+            navigator.clipboard.writeText(bodyText).then(() => {
+                const span = buttonEl.querySelector('span');
+                const originalText = span.textContent;
+                span.textContent = 'Copied!';
+                showToast("Copied update to clipboard!");
+                
+                setTimeout(() => {
+                    span.textContent = originalText;
+                }, 2000);
+            }).catch(err => {
+                showToast("Failed to copy: " + err, true);
+            });
+        }
+
+        // Export current visible timeline to CSV
+        function exportToCSV() {
+            const searchQuery = searchBar.value.toLowerCase();
+            const typeVal = typeFilter.value;
+            
+            const csvRows = [['Date', 'Type', 'Content']];
+            
+            releaseNotes.forEach(entry => {
+                entry.updates.forEach(update => {
+                    // Apply search & type filters same as renderTimeline
+                    if (typeVal !== 'ALL') {
+                        const upperType = update.type.toUpperCase();
+                        if (typeVal === 'GENERAL') {
+                            const standardTypes = ['FEATURE', 'ANNOUNCEMENT', 'ISSUE', 'DEPRECATED'];
+                            if (standardTypes.some(t => upperType.includes(t))) return;
+                        } else {
+                            if (!upperType.includes(typeVal)) return;
+                        }
+                    }
+                    if (searchQuery) {
+                        const typeMatch = update.type.toLowerCase().includes(searchQuery);
+                        const textMatch = update.html.toLowerCase().includes(searchQuery);
+                        if (!typeMatch && !textMatch) return;
+                    }
+                    
+                    // Flatten HTML/text tags to plain text for CSV
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = update.html;
+                    const plainText = tempDiv.textContent.replace(/\s+/g, ' ').trim();
+                    
+                    // Format for CSV (escape double quotes)
+                    const dateEscaped = `"${entry.date.replace(/"/g, '""')}"`;
+                    const typeEscaped = `"${update.type.replace(/"/g, '""')}"`;
+                    const contentEscaped = `"${plainText.replace(/"/g, '""')}"`;
+                    
+                    csvRows.push([dateEscaped, typeEscaped, contentEscaped]);
+                });
+            });
+            
+            if (csvRows.length <= 1) {
+                showToast("No release notes to export!", true);
+                return;
+            }
+            
+            const csvContent = csvRows.map(row => row.join(',')).join('\n');
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            
+            const link = document.createElement('a');
+            link.setAttribute('href', url);
+            link.setAttribute('download', `bigquery_release_notes_${new Date().toISOString().slice(0,10)}.csv`);
+            link.style.visibility = 'hidden';
+            
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            showToast("CSV exported successfully!");
+        }
 
         // Initialize
         fetchReleaseNotes();
